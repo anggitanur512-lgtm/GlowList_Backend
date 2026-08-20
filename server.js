@@ -107,6 +107,36 @@ app.get('/kategori', (req, res) => {
     })
 })
 
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
+
+app.post('/pengguna', async (req, res) => {
+    const {nama, email, password, no_hp } = req.body;
+
+    if (!nama || !email || !password ) {
+        return res.status(400).json({ message: 'Nama, email, password wajib di isi'});
+    }
+
+    try {
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      const sql = 'INSERT INTO pengguna (nama, email, password, no_hp) VALUES (?, ?, ?, ?)';
+      db.query(sql, [nama, email, hashedPassword, no_hp], (err, result) => {
+        if (err && err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json ({
+                massege: `Email sudah terdaftar, gunakan email lain`
+            })
+        } 
+        if (err) return res.status(500).json({ error: err.sqlMessage });
+        res.json({
+            message: 'Akun berhasil dibuat!',
+            id_pengguna: result.insertId
+        });
+      });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal mengenkripsi password'});
+    }
+})
+
 app.listen(PORT, () => {
     console.log(`Server GlowList jalan di http://localhost:${PORT}`);
 })
