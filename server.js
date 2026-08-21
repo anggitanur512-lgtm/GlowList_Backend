@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const authJWT = require('./middleware');
 const app = express();
 const PORT = 5000;
 
@@ -27,7 +28,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.send('Selamat datang di GlowList Awas Apiiiii!');
 })
-app.get('/produk', (req, res) => {
+app.get('/produk', authJWT, (req, res) => {
     const sql = 'SELECT * FROM produk';
     db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err});
@@ -35,7 +36,7 @@ app.get('/produk', (req, res) => {
     })
 })
 
-app.post('/produk', (req, res) => {
+app.post('/produk', authJWT, (req, res) => {
     const {judul, deskripsi, harga, id_kategori } = req.body;
 
     if (!judul || !harga || !deskripsi) {
@@ -52,7 +53,7 @@ app.post('/produk', (req, res) => {
     });
 });
 
-app.put('/produk/:id_produk', (req, res) => {
+app.put('/produk/:id_produk', authJWT, (req, res) => {
     const { id_produk } = req.params;
     const { judul, deskripsi, harga, id_kategori } = req.body;
 
@@ -74,7 +75,7 @@ app.put('/produk/:id_produk', (req, res) => {
     })
 })
 
-app.delete('/produk/:id_produk', (req, res) => {
+app.delete('/produk/:id_produk',authJWT,  (req, res) => {
     const { id_produk } = req.params;
     const sql = 'DELETE FROM produk WHERE id_produk = ?';
     db.query(sql, [id_produk], (err, result) => {
@@ -169,6 +170,31 @@ app.post('/login', (req, res) => {
         });
     });
 });
+
+app.get('/pengguna/me', authJWT, (req, res) => {
+    const id_pengguna = req.user.id;
+
+     const sql = `
+       SELECT id_pengguna, nama, email, no_hp
+       FROM pengguna
+       WHERE id_pengguna = ?
+       `;
+
+        db.query(sql, [id_pengguna], (err, results) => {
+            if (err) {
+                 return res.status(500).json({
+                     message: 'Gagal mengambil profil pengguna'
+                 });
+            }
+
+            if (results.length === 0) {
+                 return res.status(404).json({
+                     message: 'Pengguna tidak ditemukan'
+                 })
+            }
+             res.json(results[0]);
+        });
+})
 
 app.listen(PORT, () => {
     console.log(`Server GlowList jalan di http://localhost:${PORT}`);
